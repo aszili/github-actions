@@ -29,7 +29,7 @@ jobs:
       - name: Check if image exists
         id: image-exists
         continue-on-error: true
-        uses: tyriis/docker-image-tag-exists@v2.0.1
+        uses: tyriis/docker-image-tag-exists@v2.0.2
         if: ${{ !inputs.force }}
         with:
           registry: ghcr.io

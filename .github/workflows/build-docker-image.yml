@@ -37,7 +37,7 @@ jobs:
           tag: ${{ inputs.target_tag }}
 
       - name: Run Hadolint
-        uses: hadolint/hadolint-action@v3.2.0
+        uses: hadolint/hadolint-action@v3.3.0
         if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
         with:
           dockerfile: ./Dockerfile

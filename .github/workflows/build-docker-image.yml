@@ -57,7 +57,7 @@ jobs:
           wait-for-processing: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
         if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
 
       - name: Login to GitHub container registry

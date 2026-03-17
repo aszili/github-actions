@@ -7,75 +7,79 @@ on:
         required: true
         type: string
       target_platform:
-        required: false
         default: linux/amd64
-        type: string        
+        type: string
       build_args:
-        required: false
         type: string
       force:
-        required: false
         default: false
         type: boolean
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        if: ${{ !github.event.act }}
+      - uses: actions/checkout@v6
 
       - name: Check if image exists
         id: image-exists
-        continue-on-error: true
-        uses: tyriis/docker-image-tag-exists@v2.1.0
         if: ${{ !inputs.force }}
+        uses: tyriis/docker-image-tag-exists@v2.1.0
         with:
           registry: ghcr.io
-          repository: ${{ github.event.repository.full_name }}
+          repository: ${{ github.repository }}
           tag: ${{ inputs.target_tag }}
 
+      - name: Decide whether to build
+        id: should-build
+        run: |
+          if [[ "${{ inputs.force }}" == "true" || "${{ steps.image-exists.outputs.tag }}" != "found" ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Hadolint
+        if: ${{ steps.should-build.outputs.build == 'true' }}
         uses: hadolint/hadolint-action@v3.3.0
-        if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
         with:
           dockerfile: ./Dockerfile
           format: sarif
           output-file: hadolint-results.sarif
           no-fail: true
 
-      - name: Print Hadolint lint results
-        if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
-        run: echo 'HADOLINT LINT RESULTS => ${{ env.HADOLINT_RESULTS }}'
-
-      - name: Upload analysis results to GitHub
+      - name: Upload SARIF
+        if: ${{ steps.should-build.outputs.build == 'true' }}
         uses: github/codeql-action/upload-sarif@v4
-        if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
         with:
           sarif_file: hadolint-results.sarif
-          wait-for-processing: true
 
-      - name: Set up Docker Buildx
+      - name: Set up Buildx
+        if: ${{ steps.should-build.outputs.build == 'true' }}
         uses: docker/setup-buildx-action@v3
-        if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
 
-      - name: Login to GitHub container registry
+      - name: Login to GHCR
+        if: ${{ steps.should-build.outputs.build == 'true' }}
         uses: docker/login-action@v4
-        if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build image and push
+      - name: Build and push
+        if: ${{ steps.should-build.outputs.build == 'true' }}
         uses: docker/build-push-action@v7
-        if: ${{ inputs.force || steps.image-exists.outputs.tag != 'found' }}
         with:
           context: .
           platforms: ${{ inputs.target_platform }}
           push: true
           build-args: ${{ inputs.build_args }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
-            ghcr.io/${{ github.event.repository.full_name }}:${{ inputs.target_tag }}
-            ghcr.io/${{ github.event.repository.full_name }}:latest
+            ${{ env.IMAGE_NAME }}:${{ inputs.target_tag }}
+            ${{ env.IMAGE_NAME }}:latest

@@ -12,14 +12,19 @@ on:
         required: true
         type: string
       package_manager:
-        description: "Where to read the dependency version: 'package.json' or 'requirements'"
+        description: "Where to read the dependency version: 'package.json' or 'requirements.txt'"
         required: false
         type: string
         default: "package.json"
+      strip_prefix:
+        description: "Prefix to strip from the version, e.g., 'v' or 'release-'"
+        required: false
+        type: string
+        default: "v"
 
     outputs:
       version:
-        description: "Clean version without leading v"
+        description: "Clean version without leading prefix"
         value: ${{ jobs.parse-version.outputs.version }}
 
 jobs:
@@ -49,9 +54,10 @@ jobs:
           fi
           echo "raw_version=$RAW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Prepare version (remove leading v)
+      - name: Prepare version (remove prefix)
         id: prepare
         run: |
           CLEAN_VERSION="${{ steps.read_version.outputs.raw_version }}"
-          CLEAN_VERSION="${CLEAN_VERSION#v}"
+          PREFIX="${{ inputs.strip_prefix }}"
+          CLEAN_VERSION="${CLEAN_VERSION#$PREFIX}"
           echo "cleaned_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT

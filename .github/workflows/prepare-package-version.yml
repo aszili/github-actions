@@ -15,8 +15,8 @@ on:
     outputs:
       version:
         description: "Clean version without leading v"
-        value: ${{ steps.prepare.outputs.cleaned_version }}
-
+        value: ${{ jobs.parse-version.outputs.version }}
+          
 jobs:
   parse-version:
     runs-on: ubuntu-latest

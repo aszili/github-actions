@@ -4,19 +4,24 @@ on:
   workflow_call:
     inputs:
       package_name:
-        description: "Name of the dependency in package.json"
+        description: "Name of the dependency"
         required: true
         type: string
       output_env_var:
         description: "Environment variable name to pass to Docker"
         required: true
         type: string
+      package_manager:
+        description: "Where to read the dependency version: 'package.json' or 'requirements'"
+        required: false
+        type: string
+        default: "package.json"
 
     outputs:
       version:
         description: "Clean version without leading v"
         value: ${{ jobs.parse-version.outputs.version }}
-          
+
 jobs:
   parse-version:
     runs-on: ubuntu-latest
@@ -26,10 +31,22 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Read version from package.json
+      - name: Read version
         id: read_version
         run: |
-          RAW_VERSION=$(jq -r ".dependencies[\"${{ inputs.package_name }}\"]" package.json | cut -d'#' -f2)
+          if [ "${{ inputs.package_manager }}" = "requirements.txt" ]; then
+            RAW_VERSION=$(grep -E "^${{ inputs.package_name }}==" requirements.txt | cut -d'=' -f3)
+            if [ -z "$RAW_VERSION" ]; then
+              echo "Error: package ${{ inputs.package_name }} not found in requirements.txt"
+              exit 1
+            fi
+          else
+            RAW_VERSION=$(jq -r ".dependencies[\"${{ inputs.package_name }}\"]" package.json | cut -d'#' -f2)
+            if [ -z "$RAW_VERSION" ]; then
+              echo "Error: package ${{ inputs.package_name }} not found in package.json"
+              exit 1
+            fi
+          fi
           echo "raw_version=$RAW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Prepare version (remove leading v)

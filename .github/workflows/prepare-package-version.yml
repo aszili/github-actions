@@ -1,0 +1,40 @@
+name: Prepare Package Version
+
+on:
+  workflow_call:
+    inputs:
+      package_name:
+        description: "Name of the dependency in package.json"
+        required: true
+        type: string
+      output_env_var:
+        description: "Environment variable name to pass to Docker"
+        required: true
+        type: string
+
+    outputs:
+      version:
+        description: "Clean version without leading v"
+        value: ${{ steps.prepare.outputs.cleaned_version }}
+
+jobs:
+  parse-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.prepare.outputs.cleaned_version }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Read version from package.json
+        id: read_version
+        run: |
+          RAW_VERSION=$(jq -r ".dependencies[\"${{ inputs.package_name }}\"]" package.json | cut -d'#' -f2)
+          echo "raw_version=$RAW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Prepare version (remove leading v)
+        id: prepare
+        run: |
+          CLEAN_VERSION="${{ steps.read_version.outputs.raw_version }}"
+          CLEAN_VERSION="${CLEAN_VERSION#v}"
+          echo "cleaned_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT

@@ -33,7 +33,7 @@ jobs:
       - name: Check if image exists
         id: image-exists
         if: ${{ !inputs.force }}
-        uses: tyriis/docker-image-tag-exists@v2026.6.1
+        uses: tyriis/docker-image-tag-exists@v3.0.0
         with:
           registry: ghcr.io
           repository: ${{ github.repository }}

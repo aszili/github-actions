@@ -34,7 +34,7 @@ jobs:
       version: ${{ steps.prepare.outputs.cleaned_version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Read version
         id: read_version
